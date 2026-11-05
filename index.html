@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>CaraokeTube: sing anywhere</title>
+<meta name="description" content="Sing karaoke with live voice effects in the car, at home or on the TV.">
+<meta name="theme-color" content="#1a1226">
+<link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/pwa-192x192.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#1a1226;--panel:#261a38;--line:#3a2a52;--text:#f6efff;--mute:#b3a4c9;--amber:#ffb454;--rec:#ff6b6b}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:16px/1.45 Outfit,system-ui,sans-serif;padding:env(safe-area-inset-top) 0 calc(76px + env(safe-area-inset-bottom))}
+header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 6px;max-width:720px;margin:auto}
+h1{font-size:22px;margin:0;font-weight:700;letter-spacing:-.3px}h2{font-size:18px;margin:22px 0 8px}
+#chip{font-size:13px;color:var(--amber);max-width:55%;text-align:right}
+main{max-width:720px;margin:auto;padding:0 18px}
+.tab{display:none}.tab.on{display:block}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:var(--panel);border-radius:12px;padding:10px 14px}
+button:focus-visible,input:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+button:disabled{opacity:.4;cursor:not-allowed}
+#sf{display:flex;gap:8px;margin-top:10px}
+input[type=text]{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+#sf button,.primary{background:var(--amber);color:#2a1a00;font-weight:700}
+#chips{display:flex;gap:8px;overflow-x:auto;padding:10px 0}#chips button{white-space:nowrap;border:1px solid var(--line);background:none;color:var(--mute);border-radius:99px;padding:6px 12px;font-size:14px}
+.song{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line)}
+.song .play{flex:1;display:flex;gap:12px;align-items:center;text-align:left;background:none;padding:10px 0;min-width:0}
+.song img{width:96px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;background:var(--panel)}
+.song span{display:flex;flex-direction:column;min-width:0}.song b{font-weight:500;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+small{color:var(--mute)}.heart{background:none;font-size:22px;color:var(--amber);padding:8px}
+.vid{aspect-ratio:16/9;background:#000;border-radius:14px;overflow:hidden;margin-top:14px}.vid iframe{width:100%;height:100%;border:0}
+#now{margin:10px 0 2px;font-weight:500}
+.dock{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:20px 18px;margin-top:18px;text-align:center}
+.mic{width:132px;height:132px;border-radius:50%;background:var(--bg);border:3px solid var(--line);font-weight:700;font-size:18px;margin:8px auto 6px;display:block;transition:border-color .2s}
+.mic.on{border-color:var(--amber);color:var(--amber);box-shadow:0 0 0 calc(6px + var(--lvl,0)*28px) rgba(255,180,84,.22)}
+.seg{display:flex;gap:6px;justify-content:center;margin:14px 0}.seg button{flex:1;background:var(--bg);border:1px solid var(--line)}.seg button.on{border-color:var(--amber);color:var(--amber)}
+label{display:flex;align-items:center;gap:12px;margin:8px 0;color:var(--mute);font-size:14px}label span{width:90px;text-align:left}input[type=range]{flex:1;accent-color:var(--amber)}
+#rec{width:100%;margin-top:10px}#rec.on{background:var(--rec);color:#2a0000;font-weight:700}
+.warn{color:var(--amber);font-size:14px;margin:8px 0 0}.hint{color:var(--mute);font-size:14px;margin:8px 0}
+.rec{background:var(--panel);border-radius:14px;padding:12px 14px;margin:10px 0}.rec audio{width:100%;margin:8px 0}.rec .row{display:flex;gap:8px}
+.empty{color:var(--mute);padding:18px 0}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:#140d1e;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;background:none;border-radius:0;padding:14px 0;color:var(--mute);font-size:15px}nav button.on{color:var(--amber);font-weight:700}
+#toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--amber);color:#2a1a00;padding:10px 16px;border-radius:99px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .2s}#toast.on{opacity:1}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head><body>
+<header><h1>CaraokeTube</h1><span id="chip"></span></header>
+<main>
+<section id="t-sing" class="tab on">
+  <form id="sf"><input id="q" type="text" placeholder="Search a song or paste a YouTube link" enterkeyhint="search" aria-label="Search songs"><button>Search</button></form>
+  <div id="chips"></div><div id="res"></div>
+  <div id="stage" hidden>
+    <div class="vid"><div id="yt"></div></div>
+    <p id="now"></p><button id="fav">♡ Save song</button>
+    <p class="hint">Driving? Let a passenger run the screen.</p>
+  </div>
+  <div class="dock">
+    <button id="mic" class="mic" aria-pressed="false"><span id="miclbl">Mic off</span></button>
+    <p class="hint" id="miche">Tap to turn on your voice. Using music from another app or speaker? Just turn the mic on.</p>
+    <div class="seg" id="presets"><button data-p="studio" class="on">Studio</button><button data-p="car">Car</button><button data-p="stage">Stage</button></div>
+    <label><span>Voice volume</span><input id="vol" type="range" min="0" max="200" value="100"></label>
+    <label><span>Echo</span><input id="echo" type="range" min="0" max="100" value="28"></label>
+    <button id="rec" disabled>Record my voice</button>
+    <p class="warn" id="warn" hidden></p>
+  </div>
+</section>
+<section id="t-lib" class="tab">
+  <h2>My recordings</h2><div id="recs"></div>
+  <h2>Saved songs</h2><div id="favs"></div>
+</section>
+<section id="t-me" class="tab">
+  <h2>Account</h2><div id="acct"></div>
+  <h2>Get the lowest delay</h2>
+  <p class="hint">Bluetooth speakers add about a tenth to a third of a second. For the tightest sound, connect the phone to the car or speaker with a cable (AUX or USB-C), or sing with wired headphones. Keep the volume moderate to avoid squealing feedback.</p>
+</section>
+</main>
+<nav><button data-t="sing" class="on">Sing</button><button data-t="lib">Library</button><button data-t="me">Profile</button></nav>
+<div id="toast" role="status"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+// ===== Settings: fill these in after creating your Supabase project (see SETUP.md) =====
+const CFG={SUPABASE_URL:'',SUPABASE_ANON_KEY:''};
+// =======================================================================================
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sb=CFG.SUPABASE_URL&&window.supabase?supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY):null;
+let user=null,vip=false,results=[],cur=null,player=null,pendingId=null;
+let favs=JSON.parse(localStorage.getItem('favs')||'[]');
+const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2600)};
+
+/* ---------- tabs ---------- */
+function tab(n){$$('.tab').forEach(e=>e.classList.toggle('on',e.id==='t-'+n));$$('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===n));if(n==='lib')renderLib()}
+$$('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
+
+/* ---------- search ---------- */
+['Bollywood','Hindi karaoke','Punjabi','90s hits','English pop','Old classics'].forEach(c=>{const b=document.createElement('button');b.textContent=c;b.type='button';b.onclick=()=>{$('#q').value=c;search(c)};$('#chips').append(b)});
+const ytId=s=>(s.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/)||[])[1];
+$('#sf').onsubmit=e=>{e.preventDefault();search($('#q').value.trim())};
+async function search(q){
+  if(!q)return;const id=ytId(q);
+  if(id)return play({id,title:'YouTube video',channel:'',thumbnail:`https://i.ytimg.com/vi/${id}/hqdefault.jpg`});
+  $('#res').innerHTML='<p class="empty">Searching…</p>';
+  try{const r=await fetch('/api/youtube-search?q='+encodeURIComponent(q));if(!r.ok)throw 0;results=(await r.json()).results||[];
+    $('#res').innerHTML=results.length?results.map(songRow).join(''):'<p class="empty">No songs found. Try the artist and song name.</p>';
+  }catch{$('#res').innerHTML='<p class="empty">Search is not available right now. Paste a YouTube link above instead.</p>'}
+}
+const isFav=id=>favs.some(f=>f.id===id);
+const songRow=(s,i,list)=>`<div class="song"><button class="play" data-id="${esc(s.id)}"><img loading="lazy" src="${esc(s.thumbnail)}" alt=""><span><b>${esc(s.title)}</b><small>${esc(s.channel)}${s.duration?' · '+esc(s.duration):''}</small></span></button><button class="heart" data-fav="${esc(s.id)}" aria-label="Save song">${isFav(s.id)?'♥':'♡'}</button></div>`;
+const find=id=>results.find(s=>s.id===id)||favs.find(s=>s.id===id)||(cur&&cur.id===id?cur:null);
+document.addEventListener('click',e=>{
+  const p=e.target.closest('[data-id]'),h=e.target.closest('[data-fav]');
+  if(p){const s=find(p.dataset.id);if(s){play(s);tab('sing')}}
+  if(h){const s=find(h.dataset.fav);if(s)toggleFav(s)}
+});
+
+/* ---------- player (official YouTube embed, always visible, never covered) ---------- */
+const ytTag=document.createElement('script');ytTag.src='https://www.youtube.com/iframe_api';document.head.append(ytTag);
+window.onYouTubeIframeAPIReady=()=>{if(pendingId)mkPlayer(pendingId)};
+function mkPlayer(id){player=new YT.Player('yt',{videoId:id,playerVars:{playsinline:1,rel:0,origin:location.origin}})}
+function play(s){
+  cur=s;$('#stage').hidden=false;$('#now').textContent=s.title;updFavBtn();
+  if(player&&player.loadVideoById)player.loadVideoById(s.id);
+  else if(window.YT&&YT.Player&&!player)mkPlayer(s.id);else pendingId=s.id;
+  $('#stage').scrollIntoView({behavior:'smooth',block:'start'});
+}
+const updFavBtn=()=>{if(cur)$('#fav').textContent=isFav(cur.id)?'♥ Saved':'♡ Save song'};
+$('#fav').onclick=()=>cur&&toggleFav(cur);
+async function toggleFav(s){
+  const had=isFav(s.id);
+  favs=had?favs.filter(f=>f.id!==s.id):[{id:s.id,title:s.title,channel:s.channel,thumbnail:s.thumbnail},...favs];
+  localStorage.setItem('favs',JSON.stringify(favs));
+  if(sb&&user){had?await sb.from('favorites').delete().eq('video_id',s.id):await sb.from('favorites').upsert({user_id:user.id,video_id:s.id,title:s.title,channel:s.channel,thumb:s.thumbnail})}
+  document.querySelectorAll(`[data-fav="${s.id}"]`).forEach(b=>b.textContent=had?'♡':'♥');updFavBtn();renderLib();
+}
+
+/* ---------- voice engine (Web Audio, lowest-latency settings) ---------- */
+const PRESETS={studio:{echo:28,decay:1.8,shelf:3},car:{echo:14,decay:.9,shelf:5},stage:{echo:42,decay:2.8,shelf:2}};
+let ctx,stream,ch={},recDest,micOn=false,preset='studio',raf;
+function impulse(sec){const r=ctx.sampleRate,n=Math.floor(r*sec),b=ctx.createBuffer(2,n,r);for(let c=0;c<2;c++){const d=b.getChannelData(c);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2.5)}return b}
+function applyFx(fromPreset){
+  if(!ch.master)return;const p=PRESETS[preset];
+  if(fromPreset){$('#echo').value=p.echo;ch.conv.buffer=impulse(p.decay);ch.sh.gain.value=p.shelf}
+  ch.wet.gain.value=$('#echo').value/100*.9;ch.master.gain.value=$('#vol').value/100;
+}
+$('#vol').oninput=()=>applyFx(false);$('#echo').oninput=()=>applyFx(false);
+$$('#presets button').forEach(b=>b.onclick=()=>{preset=b.dataset.p;$$('#presets button').forEach(x=>x.classList.toggle('on',x===b));if(ch.master)applyFx(true);else $('#echo').value=PRESETS[preset].echo});
+async function micStart(){
+  try{
+    ctx=ctx||new(window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});await ctx.resume();
+    stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}});
+  }catch{$('#warn').hidden=false;$('#warn').textContent='Microphone blocked. Allow microphone access for this site in your browser settings, then tap the mic again.';return}
+  const src=ctx.createMediaStreamSource(stream),hp=ctx.createBiquadFilter(),sh=ctx.createBiquadFilter(),comp=ctx.createDynamicsCompressor();
+  hp.type='highpass';hp.frequency.value=90;sh.type='highshelf';sh.frequency.value=4000;
+  const dry=ctx.createGain(),wet=ctx.createGain(),conv=ctx.createConvolver(),master=ctx.createGain(),an=ctx.createAnalyser();an.fftSize=512;
+  src.connect(hp);hp.connect(sh);sh.connect(comp);comp.connect(dry);dry.connect(master);comp.connect(conv);conv.connect(wet);wet.connect(master);comp.connect(an);
+  recDest=ctx.createMediaStreamDestination();master.connect(ctx.destination);master.connect(recDest);
+  ch={sh,conv,wet,master,an,src};applyFx(true);micOn=true;ui();meter();warnBt();
+}
+function micStop(){if(rec&&rec.state==='recording')recStop();stream&&stream.getTracks().forEach(t=>t.stop());try{ch.master.disconnect();ch.src.disconnect()}catch{}ch={};micOn=false;cancelAnimationFrame(raf);$('#mic').style.removeProperty('--lvl');ui()}
+$('#mic').onclick=()=>micOn?micStop():micStart();
+function meter(){const b=new Uint8Array(ch.an.fftSize);(function f(){if(!micOn)return;ch.an.getByteTimeDomainData(b);let s=0;for(const v of b)s+=((v-128)/128)**2;$('#mic').style.setProperty('--lvl',Math.min(1,Math.sqrt(s/b.length)*4));raf=requestAnimationFrame(f)})()}
+async function warnBt(){try{const d=await navigator.mediaDevices.enumerateDevices();const bt=d.some(x=>x.kind==='audiooutput'&&/bluetooth|airpods|buds|a2dp|hands-?free/i.test(x.label));const w=$('#warn');w.hidden=!bt;if(bt)w.textContent='Bluetooth speaker detected. Your voice may lag a little. A cable gives the tightest sound.'}catch{}}
+function ui(){$('#mic').classList.toggle('on',micOn);$('#mic').setAttribute('aria-pressed',micOn);$('#miclbl').textContent=micOn?'Mic on':'Mic off';$('#rec').disabled=!micOn;$('#chip').textContent=micOn?'Your voice is live':''}
+
+/* ---------- recording (voice only, saved on this device) ---------- */
+let rec,chunks=[],t0,tmr;
+const IDB=new Promise((res,rej)=>{const q=indexedDB.open('caraoketube',1);q.onupgradeneeded=()=>q.result.createObjectStore('recs',{keyPath:'id'});q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)});
+const store=async(mode,fn)=>{const d=await IDB;return new Promise((res,rej)=>{const t=d.transaction('recs',mode),r=fn(t.objectStore('recs'));t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error)})};
+$('#rec').onclick=()=>rec&&rec.state==='recording'?recStop():recStart();
+function recStart(){
+  const mt=['audio/mp4','audio/webm;codecs=opus','audio/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));
+  if(!mt){toast('Recording is not supported in this browser');return}
+  chunks=[];rec=new MediaRecorder(recDest.stream,{mimeType:mt});rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+  rec.onstop=async()=>{const type=rec.mimeType.split(';')[0],ext=type==='audio/mp4'?'m4a':'webm';
+    await store('readwrite',s=>s.put({id:Date.now(),title:cur?cur.title:'My voice',date:new Date().toISOString(),secs:Math.round((Date.now()-t0)/1000),type,ext,blob:new Blob(chunks,{type})}));
+    toast('Saved to Library');renderLib()};
+  rec.start();t0=Date.now();$('#rec').classList.add('on');
+  tmr=setInterval(()=>{const s=Math.round((Date.now()-t0)/1000);$('#rec').textContent=`Stop recording · ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`},500);$('#rec').textContent='Stop recording · 0:00';
+}
+function recStop(){clearInterval(tmr);rec.stop();$('#rec').classList.remove('on');$('#rec').textContent='Record my voice'}
+
+/* ---------- library ---------- */
+async function renderLib(){
+  const all=(await store('readonly',s=>s.getAll()))||[];all.sort((a,b)=>b.id-a.id);
+  $('#recs').innerHTML=all.length?'':'<p class="empty">No recordings yet. Turn the mic on, tap Record my voice, and your takes will show up here.</p>';
+  all.forEach(r=>{const d=document.createElement('div');d.className='rec';
+    d.innerHTML=`<b>${esc(r.title)}</b><br><small>${new Date(r.date).toLocaleString()} · ${Math.floor(r.secs/60)}:${String(r.secs%60).padStart(2,'0')}</small><audio controls src="${URL.createObjectURL(r.blob)}"></audio><div class="row"><button data-a="share">Share</button><button data-a="save">Save to device</button><button data-a="del">Delete</button></div>`;
+    d.querySelector('.row').onclick=async e=>{const a=e.target.dataset.a;if(!a)return;
+      const f=new File([r.blob],`${r.title.replace(/[^\w ]+/g,'').trim()||'recording'}.${r.ext}`,{type:r.type});
+      if(a==='del'){await store('readwrite',s=>s.delete(r.id));renderLib()}
+      else if(a==='share'&&navigator.canShare&&navigator.canShare({files:[f]}))navigator.share({files:[f],title:r.title}).catch(()=>{});
+      else{const l=document.createElement('a');l.href=URL.createObjectURL(f);l.download=f.name;l.click()}};
+    $('#recs').append(d)});
+  $('#favs').innerHTML=favs.length?favs.map(songRow).join(''):'<p class="empty">Tap the heart on any song to keep it here.</p>';
+}
+
+/* ---------- account ---------- */
+function renderAcct(){
+  const a=$('#acct');
+  if(!sb)a.innerHTML='<p class="hint">Sign-in is not set up yet. You can still sing, record and save songs on this device.</p>';
+  else if(user){a.innerHTML=`<p>${esc(user.email)}<br><small>${vip?'VIP plan':'Free plan'}</small></p><button id="out">Sign out</button>`;$('#out').onclick=()=>sb.auth.signOut()}
+  else{a.innerHTML='<p class="hint">Sign in to keep your saved songs on every device.</p><button class="primary" id="in">Continue with Google</button>';$('#in').onclick=()=>sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin}})}
+}
+async function cloudLoad(){
+  if(!sb||!user)return;
+  if(favs.length)await sb.from('favorites').upsert(favs.map(f=>({user_id:user.id,video_id:f.id,title:f.title,channel:f.channel,thumb:f.thumbnail})));
+  const {data}=await sb.from('favorites').select('video_id,title,channel,thumb').order('created_at',{ascending:false});
+  if(data){favs=data.map(r=>({id:r.video_id,title:r.title,channel:r.channel,thumbnail:r.thumb}));localStorage.setItem('favs',JSON.stringify(favs))}
+  const p=await sb.from('profiles').select('is_vip').maybeSingle();vip=!!(p.data&&p.data.is_vip);renderAcct();renderLib();
+}
+if(sb)sb.auth.onAuthStateChange((_e,s)=>{user=s?s.user:null;renderAcct();cloudLoad()});
+renderAcct();renderLib();
+if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+</script></body></html>
