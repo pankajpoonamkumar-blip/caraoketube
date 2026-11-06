@@ -38,3 +38,4 @@ It needs a working public site and a privacy policy (Day 5). Approval can take d
 
 ## Test on real devices
 Open the live site on an Android phone and an iPhone (use HTTPS only; the mic needs it). Tap the mic, allow access, use headphones first, then Record, then check the Library.
+
